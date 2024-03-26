@@ -43,10 +43,10 @@ fn generate_instructions() -> Vec<Instruction<'static>> {
         LocalSet(0),
         LocalGet(0),
         LocalGet(1),
-        I32GtU,
+        I32LtU,
         BrIf(0),
         End,
-        LocalGet(1),
+        LocalGet(0),
         End,
     ]
 }
@@ -60,7 +60,7 @@ fn generate_data(size: usize) -> Vec<u8> {
     data.into_iter().flat_map(|f| f.to_le_bytes()).collect()
 }
 
-fn generate_module(size: usize) -> Module {
+pub fn generate_module(size: usize) -> Module {
     let mut module = Module::new();
     let mut type_section = TypeSection::new();
     let mut function_section = FunctionSection::new();
@@ -96,10 +96,4 @@ fn generate_module(size: usize) -> Module {
     module.section(&code_section);
     module.section(&data_section);
     module
-}
-
-fn main() {
-    let args: Vec<_> = std::env::args().collect();
-    let module = generate_module(args[1].parse().unwrap());
-    std::fs::write(&args[2], module.as_slice()).unwrap();
 }

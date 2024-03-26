@@ -8,3 +8,15 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 wasm-encoder = "0.201.0"
+
+[[bin]]
+path = "bin/main.rs"
+name = "generate"
+
+[dev-dependencies]
+criterion = "0.5.1"
+wasmtime = "19.0.0"
+
+[[bench]]
+name = "wasmtime_run"
+harness = false
