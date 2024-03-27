@@ -8,14 +8,18 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 wasm-encoder = "0.201.0"
+wasmtime = "19.0.0"
 
 [[bin]]
 path = "bin/main.rs"
 name = "generate"
 
+[[bin]]
+path = "bin/loop.rs"
+name = "loop"
+
 [dev-dependencies]
 criterion = "0.5.1"
-wasmtime = "19.0.0"
 
 [[bench]]
 name = "wasmtime_run"

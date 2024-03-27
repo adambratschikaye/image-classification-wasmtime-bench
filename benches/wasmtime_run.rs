@@ -1,28 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use wasmtime::{Config, Engine, Instance, Module, OptLevel, Store, Val};
-use wasmtime_float::generate_module;
-
-fn setup(
-    binary: &[u8],
-    opt_level: Option<OptLevel>,
-    nan_canonicalization: Option<bool>,
-) -> (Store<()>, Instance) {
-    let mut config = Config::default();
-    if let Some(opt_level) = opt_level {
-        config.cranelift_opt_level(opt_level);
-    }
-    if let Some(nan_canonicalization) = nan_canonicalization {
-        config.cranelift_nan_canonicalization(nan_canonicalization);
-    }
-    let engine = Engine::new(&config).unwrap();
-    let mut store = Store::new(&engine, ());
-    let module = Module::from_binary(&engine, binary).unwrap();
-    let instance = Instance::new(&mut store, &module, &[]).unwrap();
-    (store, instance)
-}
+use wasmtime::{OptLevel, Val};
+use wasmtime_float::{generate_module, setup};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let binary = generate_module(20 * 1024 * 1024);
+    let binary = generate_module(20 * 1024 * 1024, false);
     let (mut store, instance) = setup(binary.as_slice(), None, None);
     let func = instance.get_func(&mut store, "go").unwrap();
     let mut results = vec![Val::I32(0)];

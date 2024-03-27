@@ -1,8 +1,32 @@
-use rand::Rng;
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use wasm_encoder::{
     BlockType, CodeSection, ConstExpr, DataSection, ExportSection, Function, FunctionSection,
     Instruction, MemArg, MemorySection, MemoryType, Module, TypeSection, ValType,
 };
+use wasmtime::{Config, Engine, Instance, OptLevel, Store};
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+struct NanFloat(f32);
+
+/// f32 with a 50% chance of being NaN.
+impl NanFloat {
+    fn to_le_bytes(self) -> [u8; 4] {
+        self.0.to_le_bytes()
+    }
+}
+
+impl Distribution<NanFloat> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> NanFloat {
+        if rng.gen_bool(0.5) {
+            NanFloat(rng.gen())
+        } else {
+            NanFloat(f32::NAN)
+        }
+    }
+}
 
 fn generate_instructions() -> Vec<Instruction<'static>> {
     use Instruction::*;
@@ -51,16 +75,24 @@ fn generate_instructions() -> Vec<Instruction<'static>> {
     ]
 }
 
-fn generate_data(size: usize) -> Vec<u8> {
+fn generate_data(size: usize, include_nan: bool) -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    let mut data: Vec<f32> = vec![0.0; size];
-    for d in &mut data {
-        *d = rng.gen();
+    if include_nan {
+        let mut data: Vec<NanFloat> = vec![NanFloat(0.0); size];
+        for d in &mut data {
+            *d = rng.gen();
+        }
+        data.into_iter().flat_map(|f| f.to_le_bytes()).collect()
+    } else {
+        let mut data: Vec<f32> = vec![0.0; size];
+        for d in &mut data {
+            *d = rng.gen();
+        }
+        data.into_iter().flat_map(|f| f.to_le_bytes()).collect()
     }
-    data.into_iter().flat_map(|f| f.to_le_bytes()).collect()
 }
 
-pub fn generate_module(size: usize) -> Module {
+pub fn generate_module(size: usize, include_nan: bool) -> Module {
     let mut module = Module::new();
     let mut type_section = TypeSection::new();
     let mut function_section = FunctionSection::new();
@@ -84,7 +116,7 @@ pub fn generate_module(size: usize) -> Module {
         shared: false,
     });
 
-    let data = generate_data(size);
+    let data = generate_data(size, include_nan);
     data_section.active(0, &ConstExpr::empty().with_i32_const(0), data);
 
     export_section.export("go", wasm_encoder::ExportKind::Func, 0);
@@ -96,4 +128,23 @@ pub fn generate_module(size: usize) -> Module {
     module.section(&code_section);
     module.section(&data_section);
     module
+}
+
+pub fn setup(
+    binary: &[u8],
+    opt_level: Option<OptLevel>,
+    nan_canonicalization: Option<bool>,
+) -> (Store<()>, Instance) {
+    let mut config = Config::default();
+    if let Some(opt_level) = opt_level {
+        config.cranelift_opt_level(opt_level);
+    }
+    if let Some(nan_canonicalization) = nan_canonicalization {
+        config.cranelift_nan_canonicalization(nan_canonicalization);
+    }
+    let engine = Engine::new(&config).unwrap();
+    let mut store = Store::new(&engine, ());
+    let module = wasmtime::Module::from_binary(&engine, binary).unwrap();
+    let instance = Instance::new(&mut store, &module, &[]).unwrap();
+    (store, instance)
 }
