@@ -31,9 +31,9 @@ impl Distribution<NanFloat> for Standard {
 fn generate_instructions() -> Vec<Instruction<'static>> {
     use Instruction::*;
     vec![
-        // Set 1 to memory size in bytes / 2 = memory size * page_size / 2
+        // Set 1 to memory size in bytes = memory size * page_size
         MemorySize(0),
-        I32Const(1024 * 32), // half the page size
+        I32Const(1024 * 64),
         I32Mul,
         LocalSet(1),
         // start loop
@@ -44,23 +44,9 @@ fn generate_instructions() -> Vec<Instruction<'static>> {
             align: 0,
             memory_index: 0,
         }),
-        LocalGet(0),
-        LocalGet(1),
-        I32Add,
-        F32Load(MemArg {
-            offset: 0,
-            align: 0,
-            memory_index: 0,
-        }),
+        LocalGet(2),
         F32Add,
         LocalSet(2),
-        LocalGet(0),
-        LocalGet(2),
-        F32Store(MemArg {
-            offset: 0,
-            align: 0,
-            memory_index: 0,
-        }),
         LocalGet(0),
         I32Const(4),
         I32Add,
@@ -70,7 +56,7 @@ fn generate_instructions() -> Vec<Instruction<'static>> {
         I32LtU,
         BrIf(0),
         End,
-        LocalGet(0),
+        LocalGet(2),
         End,
     ]
 }
@@ -101,7 +87,7 @@ pub fn generate_module(size: usize, include_nan: bool) -> Module {
     let mut data_section = DataSection::new();
     let mut export_section = ExportSection::new();
 
-    type_section.function([], [ValType::I32]);
+    type_section.function([], [ValType::F32]);
     function_section.function(0);
     let mut function = Function::new([(2, ValType::I32), (1, ValType::F32)]);
     for ins in generate_instructions() {
