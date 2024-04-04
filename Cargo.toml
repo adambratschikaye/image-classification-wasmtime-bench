@@ -1,27 +1,30 @@
 [package]
-name = "wasmtime-float"
+name = "image-classification-wasmtime-bench"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-rand = "0.8.5"
-wasm-encoder = "0.202.0"
-wasmtime = { path = "../../wasmtime/crates/wasmtime" }
-
-[[bin]]
-path = "bin/main.rs"
-name = "generate"
-
-[[bin]]
-path = "bin/loop.rs"
-name = "loop"
+anyhow = "1.0"
+colorgrad = "0.6"
+bytes = "1.5.0"
+prost = "0.11.0"
+prost-types = "0.11.0"
+image = { version = "0.25.1", features = ["png"], default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+tract-onnx = { git = "https://github.com/sonos/tract", version = "=0.21.4-pre" }
 
 [dev-dependencies]
 criterion = "0.5.1"
+wasi-common = { path = "../../wasmtime/crates/wasi-common" }
+wasm-encoder = "0.202.0"
+wasmtime = { path = "../../wasmtime/crates/wasmtime" }
 wat = "1.202.0"
 
 [[bench]]
-name = "wasmtime_run"
+name = "bench"
 harness = false
